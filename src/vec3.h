@@ -42,12 +42,12 @@ public:
     double length() const {
         return std::sqrt(comp[0] + comp[1] + comp[2]);
     }
-    double lengthSquared() const {
+    double length_squared() const {
         return comp[0] * comp[0] + comp[1] * comp[1] + comp[2] * comp[2];
     }
 
 };
-using point3 = Vec3; //type alias. We would be using vec3 class for points as well
+using Point3 = Vec3; //type alias. We would be using vec3 class for points as well
 
 inline std::ostream& operator<<(std::ostream& out, const Vec3 v) {
     return out << v.comp[0] << " " << v.comp[1] << " " << v.comp[2];
@@ -84,7 +84,7 @@ inline Vec3 cross(const Vec3& u, const Vec3& v) {
 }
 
 inline Vec3 unit(const Vec3 &v) {
-    return v/v.length;
+    return v/v.length();
 }
 
 #endif
