@@ -4,8 +4,18 @@
 #include "ray.h"
 constexpr int image_width  = 256;
 constexpr int image_height = 256; //use constexpre instead of macros.
-
+bool hit_sphere(const Point3& sphere_center, double radius, const Ray& r) {
+    Vec3 oc = sphere_center - r.origin(); //(C - P)
+    auto a = dot(r.direction(), r.direction());
+    auto b = -2.0 * dot(r.direction(), oc);
+    auto c = dot(oc, oc) - radius*radius;
+    auto discriminant = b*b - (4*a*c);
+    return (discriminant >= 0);
+}
 Color ray_color(const Ray& r) {
+    if (hit_sphere(Point3(0,0,-1), 0.5, r)) {
+        return Color(1,0,0);
+    }
     Vec3 unit_direction = unit(r.direction());
     /*
     Basic implementation where the higher y coordinate, the bluer the pixel, and the lower the y-cord, the whiter the pixel
