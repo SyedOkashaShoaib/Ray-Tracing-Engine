@@ -40,7 +40,7 @@ public:
     }
 
     double length() const {
-        return std::sqrt(comp[0] + comp[1] + comp[2]);
+        return std::sqrt(length_squared());
     }
     double length_squared() const {
         return comp[0] * comp[0] + comp[1] * comp[1] + comp[2] * comp[2];
@@ -57,6 +57,13 @@ so we can write std::cout << vector
 out is equivalent to cout; An obj used to write on ostream. we have not added const cause writing on stream changes its
 state. Why are we returing ostream and not void? For chaining (std::cout << V) << '\n';
 */
+inline Vec3 operator+(const Vec3& u, const Vec3& v) {
+    return Vec3(u.comp[0] + v.comp[0], u.comp[1] + v.comp[1], u.comp[2] + v.comp[2]);
+}
+inline Vec3 operator-(const Vec3& u, const Vec3& v) {
+    return Vec3(u.comp[0] - v.comp[0], u.comp[1] - v.comp[1], u.comp[2] - v.comp[2]);
+}
+
 inline Vec3 operator*(const Vec3& u, const Vec3& v) {
     return Vec3(u.comp[0] * v.comp[0], u.comp[1] * v.comp[1], u.comp[2] * v.comp[2]);
 }
@@ -74,7 +81,7 @@ inline Vec3 operator/(const Vec3& v, double t) {
 }
 
 inline double dot(const Vec3 &v, const Vec3 &u) {
-    return v.comp[0] * u.comp[0] + v.comp[1] * u.comp[1] + v.comp[2] * u.comp[3];  
+    return v.comp[0] * u.comp[0] + v.comp[1] * u.comp[1] + v.comp[2] * u.comp[2];  
 }
 
 inline Vec3 cross(const Vec3& u, const Vec3& v) {
