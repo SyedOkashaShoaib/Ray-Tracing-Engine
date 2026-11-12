@@ -1,8 +1,8 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 #include "hittable.h"
-
-class Sphere: Hittable {
+#include "utilities.h"
+class Sphere: public Hittable {
 public:
     Sphere(const Point3& sphere_center, const double radius ): sphere_center(sphere_center), radius(std::fmax(0, radius)){};
     bool Hit(const Ray& r, double r_tmin, double r_tmax, Hit_Record& rec ) const override {

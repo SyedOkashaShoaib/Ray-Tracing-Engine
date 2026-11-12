@@ -1,9 +1,12 @@
 #include <iostream>
-#include "vec3.h"
-#include "color.h"
-#include "ray.h"
+#include "utilities.h"
+#include "hittable.h"
+#include "hittable_list.h"
+#include "sphere.h"
+
 constexpr int image_width  = 256;
 constexpr int image_height = 256; //use constexpre instead of macros.
+
 double hit_sphere(const Point3& sphere_center, double radius, const Ray& r) {
     /*
     if the spheres center is not at the origin, then its eq becomes: 
@@ -35,14 +38,10 @@ double hit_sphere(const Point3& sphere_center, double radius, const Ray& r) {
         Why not include -b + sqrt(dis) / 2a? because what we hae included gives the closest object that our ray hit.*/
     }
 }
-Color ray_color(const Ray& r) {
-    auto t = hit_sphere(Point3(0,0,-1), 0.5, r);
-    if (t > 0.0) {
-        Vec3 N = unit(r.at(t) - Vec3(0, 0, -1));
-        /*
-        surface vector. perpendicular to the point of intersection. After normalizing x,y,z range betwen -1 to 1. 
-        but write color expects them between 0-1. N + 1 / 2 does that. we map x to red, y to green, and z to blue for now */
-        return 0.5 * Color(N.x() + 1, N.y() + 1, N.z() + 1);
+Color ray_color(const Ray& r, Hittable_List& world) {
+    Hit_Record rec;
+    if (world.Hit(r, 0, infinity, rec)){
+        return 0.5 *(rec.normal + Color(1,1,1));
     }
     Vec3 unit_direction = unit(r.direction());
     /*
@@ -54,8 +53,6 @@ Color ray_color(const Ray& r) {
     */
    auto a = 0.5 * (unit_direction.y() + 1.0 );
    return (1 - a) * Color(1.0,1.0,1.0) + a * Color(0.5, 0.7, 1.0); //c1 is white
-
-    
 }
 void renderImage() {
     
@@ -85,6 +82,9 @@ void renderImage() {
     auto viewport_upperleft = camera_center - Vec3(0, 0 , focal_length) - (viewport_u / 2 + viewport_v / 2);
     auto pixel00_loc = viewport_upperleft + 0.5 * (pixel_delta_u + pixel_delta_v);
 
+    Hittable_List world;
+    world.add(std::make_shared<Sphere>(Point3(0,0,-1), 0.5));
+    world.add(std::make_shared<Sphere>(Point3(0, -100.5, -1), 100));
      std::cout << "P3\n" << image_width << " " << image_height << "\n255\n"; // p3 -> ppm file, last 255 tells the max value for r,g,b
     
     for (int row = 0; row < image_height; row++)
@@ -96,7 +96,7 @@ void renderImage() {
             auto pixel_center = pixel00_loc + (col * pixel_delta_u) + (row * pixel_delta_v);
             auto ray_direction = pixel_center - camera_center;
             Ray r(camera_center, ray_direction);
-            Color pixel_color= ray_color(r);
+            Color pixel_color= ray_color(r, world);
             write_color(std::cout, pixel_color);
             
         }

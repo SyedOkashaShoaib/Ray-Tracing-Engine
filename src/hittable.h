@@ -1,6 +1,6 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
-#include "ray.h"
+#include "utilities.h"
 class Hit_Record {
 public:
     double t; 

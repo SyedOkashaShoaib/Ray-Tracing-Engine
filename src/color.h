@@ -2,7 +2,7 @@
 #define COLOR_H
 
 #include "vec3.h"
-#include <iostream>
+#include "utilities.h"
 
 using Color = Vec3;
 //monkey write color.

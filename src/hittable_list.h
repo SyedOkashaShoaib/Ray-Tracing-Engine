@@ -1,10 +1,11 @@
 #ifndef HITTABLE_LIST_H
-#define HITTAbLE_LIST_H
-#include <memory> 
+#define HITTABLE_LIST_H
+
 #include <vector>
 #include "hittable.h"
+#include "utilities.h"
 
-class Hittable_List {
+class Hittable_List: public Hittable {
 public:
     std::vector<std::shared_ptr<Hittable>> objects;
     /*look up shared ptrs. essentially every time you assign a shared ptrs value to another ptr, 
@@ -17,9 +18,9 @@ public:
     void clear() {
         objects.clear();
     }
-    bool hit(const Ray& r, Hit_Record& rec, double ray_tmin, double ray_tmax) {
+    bool Hit(const Ray& r, double ray_tmin, double ray_tmax, Hit_Record& rec) const override {
         bool is_hitting_something_something = false; 
-        double closest_hit_so_far = ray_tmin;
+        double closest_hit_so_far = ray_tmax;
         Hit_Record temp_rec; 
         for (const auto& obj : objects) {
             if (obj->Hit(r, ray_tmin, closest_hit_so_far, temp_rec)) {
