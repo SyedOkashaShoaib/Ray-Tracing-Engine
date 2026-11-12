@@ -7,7 +7,7 @@
 /*
  P = A + tB
  A -> Origin point of the ray. 
- B -> Length of the ray. 
+ B -> direction of the ray. 
  t -> Parameter controlling the position on the ray. 
     t = 0 -> P = A 
     t < 0  P is some point behind A. 
@@ -20,7 +20,7 @@ public:
     const Point3& origin() const { return orig; }
     const Vec3& direction() const { return dir; }
 
-    Point3 at(double t) {
+    Point3 at(double t) const {
         return orig + t * dir;
     }
 private: 

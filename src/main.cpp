@@ -4,17 +4,45 @@
 #include "ray.h"
 constexpr int image_width  = 256;
 constexpr int image_height = 256; //use constexpre instead of macros.
-bool hit_sphere(const Point3& sphere_center, double radius, const Ray& r) {
+double hit_sphere(const Point3& sphere_center, double radius, const Ray& r) {
+    /*
+    if the spheres center is not at the origin, then its eq becomes: 
+    (Cx−x)^2+(Cy−y)^2+(Cz−z)^2=r^2 (Cx, ..) is the center of the sphere.
+    here (x,y,z) belongs to ray r. therefore
+    (C - P). (C - P) = r^2 
+    if r hits the sphere at any point, then there is a value of t that satisfies the above equation.
+    => (C - (Q + t.d)).(C - (Q + t.d)) = r^2
+    solving the equation gives us: 
+    t^2d⋅d−2td⋅(C−Q)+(C−Q)⋅(C−Q)−r^2=0
+    This is a quadratic equation. we can find t using the quadratic formula. 
+    if b-4ac is negative -> the ray is not hitting the sphere. 
+    if b-4ac is zero, the ray is a tangent
+    else the ray intersects the sphere at 2 ponts
+    */
     Vec3 oc = sphere_center - r.origin(); //(C - P)
     auto a = dot(r.direction(), r.direction());
-    auto b = -2.0 * dot(r.direction(), oc);
-    auto c = dot(oc, oc) - radius*radius;
-    auto discriminant = b*b - (4*a*c);
-    return (discriminant >= 0);
+    auto h = dot( r.direction(), oc);
+    /*
+    whats h?? its its an optimization. assume b = -2h. -2h = -2d.(C - Q) */
+    auto c = oc.length_squared() - radius*radius;
+    auto discriminant = h*h - (a*c);
+    if(discriminant < 0.0) {
+        return -1.0;
+    }
+    else {
+        return (h-std::sqrt(discriminant) ) / a; 
+        /*
+        Why not include -b + sqrt(dis) / 2a? because what we hae included gives the closest object that our ray hit.*/
+    }
 }
 Color ray_color(const Ray& r) {
-    if (hit_sphere(Point3(0,0,-1), 0.5, r)) {
-        return Color(1,0,0);
+    auto t = hit_sphere(Point3(0,0,-1), 0.5, r);
+    if (t > 0.0) {
+        Vec3 N = unit(r.at(t) - Vec3(0, 0, -1));
+        /*
+        surface vector. perpendicular to the point of intersection. After normalizing x,y,z range betwen -1 to 1. 
+        but write color expects them between 0-1. N + 1 / 2 does that. we map x to red, y to green, and z to blue for now */
+        return 0.5 * Color(N.x() + 1, N.y() + 1, N.z() + 1);
     }
     Vec3 unit_direction = unit(r.direction());
     /*
@@ -27,7 +55,7 @@ Color ray_color(const Ray& r) {
    auto a = 0.5 * (unit_direction.y() + 1.0 );
    return (1 - a) * Color(1.0,1.0,1.0) + a * Color(0.5, 0.7, 1.0); //c1 is white
 
-
+    
 }
 void renderImage() {
     
