@@ -8,6 +8,7 @@ public:
     double aspect_ratio = 1.0;
     int image_width = 100; //pixel units
     int samples_per_pixel = 10; //how many rays intersect one pixel square?
+    int max_depth=10; //ray_color() is recursive, it stops when a ray stops hitting a surface. but that could be a lloooong time. 
     Camera() {}
 
     Vec3 sample_square() {
@@ -16,11 +17,22 @@ public:
         random_double returns between [0,1). subtract 0.5 and your range becomes [-.5,.5). so for each pixel "square"
         the offset lies 0.5 units away from the center. z axis is 0 cause the viewport is flat...This is all done for anti-aliasing.*/
     }
-    Vec3 ray_color(const Ray& r, Hittable& world) const {
+    Vec3 ray_color(const Ray& r, Hittable& world, int depth) const {
         Hit_Record rec;
-        if (world.Hit(r, 0, infinity, rec)){
-            Vec3 direction = random_vector_on_hemisphere(rec.normal);
-            return 0.5 * (ray_color(Ray(rec.p, direction), world));
+        if (depth <= 0) {
+            return Color(0,0,0); //black.
+        }
+        if (world.Hit(r, 0.001, infinity, rec)){
+            /*
+            why is t_min 0.001 instead of 0? Because it provides a basic workaround for the shadow acne problem. 
+            P is calculated using floating point arithmetic, meaning that the intersection point of the ray could be 
+            slighlty above or below the surface of the hittable object. by using t=0.001 we try to mitigate this small floating 
+            point inaccuracy.  */
+            Vec3 direction = rec.normal + random_vector_on_hemisphere(rec.normal);
+            /*why add the normal vector? Because we are using lambartian distribution. Can i claim that i completely understand 
+            this? No. But lambartian distribution claims that a reflected ray is more likely to be closer to the surface normal. 
+            lambartian distribution better renders diffuse objs*/
+            return Color(.2, .2,.8) * (ray_color(Ray(rec.p, direction), world, depth-1));
         }
         Vec3 unit_direction = unit(r.direction());
     /*
@@ -51,7 +63,7 @@ public:
                 Color pixel_color(0,0,0);
                 for (int sample = 0; sample < samples_per_pixel; sample++) {
                     Ray r = get_ray(col, row);
-                    pixel_color += ray_color(r, world);
+                    pixel_color += ray_color(r, world, max_depth);
                 /*
                 why are summing up the ray colors? previously, we would pass a ray through the center of a pixel "square" only. one ray per square. This 
                 caused jitering, or the stairs effect on object's boundaries. now we are passing multiple rays accross a pixel's square, summing up their
@@ -78,6 +90,7 @@ private:
     Vec3   pixel_delta_u;  
     Vec3   pixel_delta_v;
     double pixel_samples_scale ; // division is expensive. do it once. then multiply with this where you were supposed to divide.big brain stuff.
+    
     void initialize() {
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height; 

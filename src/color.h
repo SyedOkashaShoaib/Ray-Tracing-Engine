@@ -5,12 +5,31 @@
 #include "utilities.h"
 #include "interval.h"
 using Color = Vec3;
+
+inline double linear_to_gamma(double linear_component) {
+    Interval interval(0.0, 1.0);
+    linear_component = interval.clamp(linear_component);
+    if (linear_component <= 0.0031308) {
+        return 12.92 * linear_component;
+    }
+    return 1.055 * std::pow(linear_component, 1.0/2.4) - 0.055;
+    /*
+    image viewers expect images to be in gamma space. but ray tracing engines usually use linear space.
+    in linear space 0.5 means 50% light intensity
+    Color in gamma space = square root of (color in linear space)
+    but here i am using sRGB to convert from linear to gamma, so my formual is different. i might revert to 
+    the formula written above later on.*/
+    
+}
 //monkey write color.
 inline void write_color(std::ostream& out, const Color& pixel_color) {
     double r = pixel_color.x();
     double g = pixel_color.y();
     double b = pixel_color.z();
 
+    r = linear_to_gamma(r);
+    g = linear_to_gamma(g);
+    b = linear_to_gamma(b);
     //converting into range of 0-255
 /* 
 Why are facing the need for this conversino? 
@@ -19,9 +38,9 @@ Because ray tracing engine calculates color in floating point numbers between 0-
 1.0 -> Full contribution
 PPM image format expects rgb values in the int range of 0-255 in our implementation */
     Interval interval(0.000, 0.999);
-    int r_byte = int(255.999 * interval.clamp(r));
-    int g_byte = int(255.999 * interval.clamp(g));
-    int b_byte = int(255.999 * interval.clamp(b));
+    int r_byte = int(256 * interval.clamp(r));
+    int g_byte = int(256 * interval.clamp(g));
+    int b_byte = int(256 * interval.clamp(b));
 
     out << r_byte << " " << g_byte << " " << b_byte << "\n";
 /* Why not use std::cout << r_byte... like a good little boy? Because then we would only be able to write on the 
