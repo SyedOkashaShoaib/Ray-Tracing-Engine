@@ -45,6 +45,7 @@ public:
         return comp[0] * comp[0] + comp[1] * comp[1] + comp[2] * comp[2];
     }
 
+
 };
 using Point3 = Vec3; //type alias. We would be using vec3 class for points as well
 
@@ -92,5 +93,26 @@ inline Vec3 cross(const Vec3& u, const Vec3& v) {
 inline Vec3 unit(const Vec3 &v) {
     return v/v.length();
 }
-
+inline Vec3 random_vector() {
+        return Vec3(random_double(), random_double(), random_double());
+    }
+inline Vec3 random_vector(double min, double max){
+        return Vec3(random_double(min, max), random_double(min, max), random_double(min, max));
+}
+inline Vec3 random_unit_vector() {
+    while(true) {
+        auto point = random_vector(-1,1);
+        auto lensq = point.length_squared();
+        if (lensq <= 1 && lensq > 1e-160) {
+            return point/sqrt(lensq);
+        }
+    }
+}
+inline Vec3 random_vector_on_hemisphere(const Vec3& normal ) {
+    auto on_unit_sphere = random_unit_vector();
+    if (dot(normal, on_unit_sphere) > 0.0) {
+        return on_unit_sphere;
+    }
+    return -on_unit_sphere;
+}
 #endif

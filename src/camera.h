@@ -19,7 +19,8 @@ public:
     Vec3 ray_color(const Ray& r, Hittable& world) const {
         Hit_Record rec;
         if (world.Hit(r, 0, infinity, rec)){
-            return 0.5 *(rec.normal + Color(1,1,1));
+            Vec3 direction = random_vector_on_hemisphere(rec.normal);
+            return 0.5 * (ray_color(Ray(rec.p, direction), world));
         }
         Vec3 unit_direction = unit(r.direction());
     /*
