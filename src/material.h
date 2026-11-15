@@ -1,6 +1,7 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
+#include <algorithm>
 #include "hittable.h"
 /*read 10.4ish to understand this stuff. i forgot to add comments*/
 class Material {
@@ -36,14 +37,17 @@ private:
 
 class Metal: public Material {
 public:
-    Metal (const Color& albedo): albedo(albedo) {}
+    Metal (const Color& albedo, double fuzz): albedo(albedo), fuzz(fuzz < 1 ? fuzz: 1) {}
+    
     bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override  {
-        Vec3 scatter_direction = reflect(r_in.direction(), rec.normal);
-        r_out = Ray(rec.p, scatter_direction);
+        Vec3 reflected_r = reflect(r_in.direction(), rec.normal);
+        reflected_r = unit(reflected_r) + fuzz * random_unit_vector();
+        r_out = Ray(rec.p, reflected_r);
         attenuation = albedo; 
-        return true;
+        return (dot(r_out.direction(), rec.normal) > 0.0);
     }
 private:
     const Color albedo;
+    const double fuzz;
 };
 #endif
