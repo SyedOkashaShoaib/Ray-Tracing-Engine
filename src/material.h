@@ -68,7 +68,7 @@ public:
         sintheta_1 = 1.5 / 1.0 * sintheta_2
         but sintheta_1 cant be greater than 1 obv. thus we cant refract,we must reflect*/
         Vec3 direction;
-        if (cant_refract) {
+        if (cant_refract || reflectance(cos_theta, ri) > random_double()) {
             direction = reflect(r_in.direction(), rec.normal);
         }
         else {
@@ -80,5 +80,12 @@ public:
     }
 private:
     double refractive_index;
+
+    static double reflectance(double cosine, double refractive_index) {
+        /*real glasses reflectivity varies with angle. Schlicks approx approximates that variance.*/
+        auto r0 = (1 - refractive_index) / (1 + refractive_index);
+        r0 = r0*r0;
+        return r0 + (1-r0)*std::pow((1 - cosine),5);
+    }
 };
 #endif
