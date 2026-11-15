@@ -32,7 +32,7 @@ public:
         return true;
     }
 private:
-    const Color albedo;
+    Color albedo;
 };
 
 class Metal: public Material {
@@ -47,7 +47,38 @@ public:
         return (dot(r_out.direction(), rec.normal) > 0.0);
     }
 private:
-    const Color albedo;
-    const double fuzz;
+    Color albedo;
+    double fuzz;
+};
+
+class Dielectric: public Material {
+public:
+    Dielectric(double refractive_index): refractive_index(refractive_index) {}
+    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override {
+        attenuation = Color(1,1,1);
+        double ri = rec.front_face ? (1.0 / refractive_index) : (refractive_index / 1);
+        /*if front face is true, that means that rays entering from air in the dielectric. therefore ratio becomes = ri_air / ri_dielectrc.
+        otherwise ri is the inverse. */
+        Vec3 unit_direction = unit(r_in.direction());
+        double cos_theta = std::fmin(dot(-unit_direction, rec.normal), 1.0);
+        double sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
+        bool cant_refract = sin_theta * ri > 1.0;
+        /*
+        this relates to the concept of total internal reflectance. If the angle of incidence is too shallow, then 
+        sintheta_1 = 1.5 / 1.0 * sintheta_2
+        but sintheta_1 cant be greater than 1 obv. thus we cant refract,we must reflect*/
+        Vec3 direction;
+        if (cant_refract) {
+            direction = reflect(r_in.direction(), rec.normal);
+        }
+        else {
+            direction = refract(unit_direction, rec.normal, ri);
+        }
+        
+        r_out = Ray(rec.p , direction);
+        return true;
+    }
+private:
+    double refractive_index;
 };
 #endif
