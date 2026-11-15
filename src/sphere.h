@@ -4,7 +4,7 @@
 #include "utilities.h"
 class Sphere: public Hittable {
 public:
-    Sphere(const Point3& sphere_center, const double radius ): sphere_center(sphere_center), radius(std::fmax(0, radius)){};
+    Sphere(const Point3& sphere_center, const double radius, std::shared_ptr<Material> mat ): sphere_center(sphere_center), radius(std::fmax(0, radius)), mat(mat){};
     bool Hit(const Ray& r, double r_tmin, double r_tmax, Hit_Record& rec ) const override {
    /*
     if the spheres center is not at the origin, then its eq becomes: 
@@ -43,11 +43,14 @@ public:
         rec.p = r.at(rec.t);
         Vec3 outward_normal= (rec.p - sphere_center) / radius;
         rec.set_face_normal(r, outward_normal);
+        rec.mat = mat;
 
         return true;
     }
 private:
     Point3 sphere_center;
     double radius;
+    std::shared_ptr<Material> mat;
 };
+
 #endif

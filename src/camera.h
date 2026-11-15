@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 #include "hittable_list.h"
-
+#include "material.h"
 
 class Camera {
 public:
@@ -23,16 +23,12 @@ public:
             return Color(0,0,0); //black.
         }
         if (world.Hit(r, 0.001, infinity, rec)){
-            /*
-            why is t_min 0.001 instead of 0? Because it provides a basic workaround for the shadow acne problem. 
-            P is calculated using floating point arithmetic, meaning that the intersection point of the ray could be 
-            slighlty above or below the surface of the hittable object. by using t=0.001 we try to mitigate this small floating 
-            point inaccuracy.  */
-            Vec3 direction = rec.normal + random_vector_on_hemisphere(rec.normal);
-            /*why add the normal vector? Because we are using lambartian distribution. Can i claim that i completely understand 
-            this? No. But lambartian distribution claims that a reflected ray is more likely to be closer to the surface normal. 
-            lambartian distribution better renders diffuse objs*/
-            return Color(.2, .2,.8) * (ray_color(Ray(rec.p, direction), world, depth-1));
+            Ray r_out;
+            Color attenuation;
+            if (rec.mat->scatter(r, r_out, rec, attenuation)) {
+                return attenuation * ray_color(r_out, world, depth-1);
+            }
+            return Color(0,0,0);
         }
         Vec3 unit_direction = unit(r.direction());
     /*

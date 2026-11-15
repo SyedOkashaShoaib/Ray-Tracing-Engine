@@ -1,12 +1,14 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
 #include "utilities.h"
+class Material; //circular ref solution
 class Hit_Record {
 public:
     double t; 
     Vec3 normal;
     Point3 p;
     bool front_face;
+    std::shared_ptr<Material> mat;
     void set_face_normal(const Ray& r, const Vec3& outward_normal) {
         /*
         in this ray tracer engine implementation, we have decided that the normla vector will always point agaisnt
@@ -19,6 +21,7 @@ public:
 };
 class Hittable {
 public:
+
     virtual ~Hittable() = default; //destructor. =default means compiler will implement the destruction code.
     virtual bool Hit(const Ray& r, double r_tmin, double r_tmax, Hit_Record& rec ) const = 0;
     /*

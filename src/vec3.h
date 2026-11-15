@@ -44,7 +44,10 @@ public:
     double length_squared() const {
         return comp[0] * comp[0] + comp[1] * comp[1] + comp[2] * comp[2];
     }
-
+    bool near_zero() const {
+        float small_val = 1e-8;
+        return (std::fabs(comp[0]) < small_val ) && (std::fabs(comp[1]) < small_val ) && (std::fabs(comp[2]) < small_val );
+    }
 
 };
 using Point3 = Vec3; //type alias. We would be using vec3 class for points as well
@@ -114,5 +117,8 @@ inline Vec3 random_vector_on_hemisphere(const Vec3& normal ) {
         return on_unit_sphere;
     }
     return -on_unit_sphere;
+}
+inline Vec3 reflect(Vec3 v, Vec3 n) {
+    return v - 2*dot(v,n)*n; //look metal class for explanatoin
 }
 #endif
