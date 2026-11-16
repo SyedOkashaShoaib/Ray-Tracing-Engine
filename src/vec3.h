@@ -124,12 +124,21 @@ inline Vec3 reflect(Vec3 v, Vec3 n) {
 inline Vec3 refract(const Vec3& uv, const Vec3& n, double ref_ind1_over_ref_ind2) {
     /*for dielectric surfaces which refract (light bends when it enters a dielectric medium)
     using snells law: 
-        refractive index of medium 1 x angle with incident ray and normal = ref_index_2 x angle of refracted ray and normal
+        refractive index of medium 1 x sin(angle with incident ray and normal) = ref_index_2 x sin(angle of refracted ray and normal)
         we break the refracted ray R into R_perp, and R_par so we can represent snells law in Vec3 form. idk how the equations are
         dervied.*/
     auto cos_theta = std::fmin(dot(-uv, n), 1.0);
     Vec3 r_out_perp =  ref_ind1_over_ref_ind2 * (uv + cos_theta*n);
     Vec3 r_out_parallel = -std::sqrt(std::fabs(1.0 - r_out_perp.length_squared())) * n;
     return r_out_perp + r_out_parallel;
+}
+
+inline Vec3 random_on_unit_disk() {
+    while( true) {
+        auto p = Vec3(random_double(-1,1), random_double(-1,1), 0);
+        if (p.length_squared() < 1) {
+            return p;
+        }
+    }
 }
 #endif
