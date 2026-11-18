@@ -24,18 +24,19 @@ public:
         }
         else if(object_span == 2) {
             left = objects[start];
-            right = objects[end];
+            right = objects[start + 1];
             /*another bae case*/
         }
         else {
             std::sort(std::begin(objects) + start, std::begin(objects)+end, comparator); 
             /*sort the objects along the axis. For eg, if the chosen axis is x, then sort according to each objects x-coord*/
             auto mid = start + object_span / 2;
-            left = std::make_shared<BVH_Node>(objects, start, end); //constructing the left child, and its left children and so on
+            left = std::make_shared<BVH_Node>(objects, start, mid); //constructing the left child, and its left children and so on
             right = std::make_shared<BVH_Node>(objects, mid, end);
 
-            bbox = Aabb(left->bounding_box(), right->bounding_box());
+            
         }
+        bbox = Aabb(left->bounding_box(), right->bounding_box());
     }
     bool Hit(const Ray& r, Interval ray_t, Hit_Record& rec ) const override {
         if (!bbox.hit(r, ray_t)) {

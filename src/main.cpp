@@ -27,8 +27,6 @@ int main() {
     cam.v_up = Vec3(0,1,0);
     cam.defocus_angle = 5.0;
     cam.focus_dist = 2.625;
-    cam.renderImage(world); 
-
      world = Hittable_List(std::make_shared<BVH_Node>(world));
 
 
