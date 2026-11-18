@@ -37,7 +37,13 @@ public:
     Vec3& operator/=(double scalar) {
         return *this*=1/scalar; //cheeky.
     }
+    double operator[](int i) const {
+        return comp[i];
+    }
 
+    double& operator[](int i) {
+        return comp[i];
+    }
     double length() const {
         return std::sqrt(length_squared());
     }
@@ -141,4 +147,6 @@ inline Vec3 random_on_unit_disk() {
         }
     }
 }
+
+
 #endif

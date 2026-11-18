@@ -23,12 +23,12 @@ public:
         random_double returns between [0,1). subtract 0.5 and your range becomes [-.5,.5). so for each pixel "square"
         the offset lies 0.5 units away from the center. z axis is 0 cause the viewport is flat...This is all done for anti-aliasing.*/
     }
-    Vec3 ray_color(const Ray& r, Hittable& world, int depth) const {
+    Vec3 ray_color(const Ray& r, const Hittable& world, int depth) const {
         Hit_Record rec;
         if (depth <= 0) {
             return Color(0,0,0); //black.
         }
-        if (world.Hit(r, 0.001, infinity, rec)){
+        if (world.Hit(r, Interval(0.001, infinity), rec)){
             Ray r_out;
             Color attenuation;
             if (rec.mat->scatter(r, r_out, rec, attenuation)) {
@@ -48,7 +48,7 @@ public:
         return (1 - a) * Color(1.0,1.0,1.0) + a * Color(0.5, 0.7, 1.0); //c1 is white
     }
 
-    void renderImage(Hittable_List& world) {   
+    void renderImage(const Hittable_List& world) {   
         initialize();
         std::cout << "P3\n" << image_width << " " << image_height << "\n255\n"; // p3 -> ppm file, last 255 tells the max value for r,g,b
         for (int row = 0; row < image_height; row++)

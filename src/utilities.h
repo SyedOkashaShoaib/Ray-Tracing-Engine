@@ -23,6 +23,10 @@ inline double random_double(double min, double max) {
     return min + (max - min ) * random_double(); //[min, max)
 }
 
+inline int random_int(int min, int max) {
+    return int(random_double(min, max + 1));
+}
+#include "interval.h"
 #include "color.h"
 #include "ray.h"
 #include "vec3.h"

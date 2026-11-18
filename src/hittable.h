@@ -1,7 +1,9 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
 #include "utilities.h"
+#include "aabb.h"
 class Material; //circular ref solution
+
 class Hit_Record {
 public:
     double t; 
@@ -18,15 +20,18 @@ public:
         front_face = dot(r.direction(), outward_normal) < 0.0;
         normal = front_face ? outward_normal : -outward_normal;
     }
+
 };
 class Hittable {
 public:
 
     virtual ~Hittable() = default; //destructor. =default means compiler will implement the destruction code.
-    virtual bool Hit(const Ray& r, double r_tmin, double r_tmax, Hit_Record& rec ) const = 0;
+    virtual bool Hit(const Ray& r,Interval ray_t, Hit_Record& rec ) const = 0;
     /*
     a hit only counts if  t_min < t < t_max. 
     every object implements its own version of this.  */
+
+    virtual Aabb bounding_box () const = 0;
 
 };
 #endif

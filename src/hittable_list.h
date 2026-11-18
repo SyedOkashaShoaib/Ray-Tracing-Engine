@@ -14,16 +14,17 @@ public:
     Hittable_List(std::shared_ptr<Hittable> object) { add(object);}
     void add(std::shared_ptr<Hittable> object) {
         objects.push_back(object);
+        bbox = Aabb(bbox, object->bounding_box());
     }
     void clear() {
         objects.clear();
     }
-    bool Hit(const Ray& r, double ray_tmin, double ray_tmax, Hit_Record& rec) const override {
+    bool Hit(const Ray& r, Interval ray_t, Hit_Record& rec) const override {
         bool is_hitting_something_something = false; 
-        double closest_hit_so_far = ray_tmax;
+        double closest_hit_so_far = ray_t.max;
         Hit_Record temp_rec; 
         for (const auto& obj : objects) {
-            if (obj->Hit(r, ray_tmin, closest_hit_so_far, temp_rec)) {
+            if (obj->Hit(r, Interval(ray_t.min, closest_hit_so_far), temp_rec)) {
                 is_hitting_something_something = true;
                 closest_hit_so_far = temp_rec.t;
                 /*
@@ -35,6 +36,12 @@ public:
         }
         return is_hitting_something_something;
     }
+
+    Aabb bounding_box() const override {
+        return bbox;
+    }
+private:
+    Aabb bbox;
 
 };
 #endif

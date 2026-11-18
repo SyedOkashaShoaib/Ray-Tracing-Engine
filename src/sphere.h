@@ -4,8 +4,13 @@
 #include "utilities.h"
 class Sphere: public Hittable {
 public:
-    Sphere(const Point3& sphere_center, const double radius, std::shared_ptr<Material> mat ): sphere_center(sphere_center), radius(std::fmax(0, radius)), mat(mat){};
-    bool Hit(const Ray& r, double r_tmin, double r_tmax, Hit_Record& rec ) const override {
+    Sphere(const Point3& sphere_center, const double radius, std::shared_ptr<Material> mat ): sphere_center(sphere_center), radius(std::fmax(0, radius)), mat(mat){
+        auto rvec = Vec3(this->radius, this->radius, this->radius);
+        bbox = Aabb(sphere_center - rvec,sphere_center + rvec );
+        /*
+        bouding box for sphere. a sphere extends r units in every positive, neg direction*/
+    };
+    bool Hit(const Ray& r, Interval ray_t, Hit_Record& rec ) const override {
    /*
     if the spheres center is not at the origin, then its eq becomes: 
     (Cx−x)^2+(Cy−y)^2+(Cz−z)^2=r^2 (Cx, ..) is the center of the sphere.
@@ -32,9 +37,10 @@ public:
         }
         auto sqrtd = std::sqrt(discriminant);
         auto root = (h - sqrtd) / a;
-        if (root <= r_tmin || root >= r_tmax) {
+        if (!ray_t.surrounds(root)) {
             root = (h + sqrtd) / a;
-            if (root <= r_tmin || root >= r_tmax) {
+
+            if (!ray_t.surrounds(root)) {
                 return false;
             }
         }
@@ -47,10 +53,16 @@ public:
 
         return true;
     }
+
+    Aabb bounding_box() const override {
+        return bbox; 
+    }
 private:
     Point3 sphere_center;
     double radius;
     std::shared_ptr<Material> mat;
+    Aabb bbox; 
 };
+
 
 #endif

@@ -19,7 +19,7 @@ public:
         P is calculated using floating point arithmetic, meaning that the intersection point of the ray could be 
         slighlty above or below the surface of the hittable object. by using t=0.001 we try to mitigate this small floating 
         point inaccuracy.  */
-        Vec3 scatter_direction = rec.normal + random_vector_on_hemisphere(rec.normal);
+        Vec3 scatter_direction = rec.normal + random_unit_vector();
         /*why add the normal vector? Because we are using lambartian distribution. Can i claim that i completely understand 
         this? No. But lambartian distribution claims that a reflected ray is more likely to be closer to the surface normal. 
         lambartian distribution better renders diffuse objs*/
@@ -69,7 +69,7 @@ public:
         but sintheta_1 cant be greater than 1 obv. thus we cant refract,we must reflect*/
         Vec3 direction;
         if (cant_refract || reflectance(cos_theta, ri) > random_double()) {
-            direction = reflect(r_in.direction(), rec.normal);
+            direction = reflect(unit_direction, rec.normal);
         }
         else {
             direction = refract(unit_direction, rec.normal, ri);
