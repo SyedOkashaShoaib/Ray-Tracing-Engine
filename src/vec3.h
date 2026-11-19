@@ -1,7 +1,7 @@
 #ifndef VEC3_H
 #define VEC3_H
 
-#include "utilities.h"
+#include "core_utilities.h"
 
 class Vec3
 {

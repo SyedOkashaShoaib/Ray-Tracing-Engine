@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include "hittable.h"
+#include "texture.h"
 /*read 10.4ish to understand this stuff. i forgot to add comments*/
 class Material {
 public:
@@ -12,8 +13,9 @@ public:
 
 class Lambertian: public Material {
 public: 
-    Lambertian(const Color& albedo): albedo(albedo) {}
-    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override {
+    Lambertian(const Color& albedo): tex(std::make_shared<Solid_Color>(albedo)) {}
+    Lambertian(std::shared_ptr<Texture> tex) : tex(tex) {}
+    bool scatter(const Ray&, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override {
         /*
         why is t_min 0.001 instead of 0? Because it provides a basic workaround for the shadow acne problem. 
         P is calculated using floating point arithmetic, meaning that the intersection point of the ray could be 
@@ -27,12 +29,12 @@ public:
             /*if random unit vector is exactly opposite to normal vector, resultant vector can be a zero vector. very bad*/
             scatter_direction = rec.normal;
         }
-        attenuation = albedo;
+        attenuation = tex->value(rec.u, rec.v, rec.p); //This means the attenuation can differ depending on where the ray strikes the object.
         r_out = Ray(rec.p, scatter_direction);
         return true;
     }
 private:
-    Color albedo;
+    std::shared_ptr<Texture> tex; //for texture mappnig on lambertian surfaces
 };
 
 class Metal: public Material {

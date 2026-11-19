@@ -49,6 +49,7 @@ public:
         rec.p = r.at(rec.t);
         Vec3 outward_normal= (rec.p - sphere_center) / radius;
         rec.set_face_normal(r, outward_normal);
+        get_uv_coordinates(rec.u, rec.v, outward_normal);
         rec.mat = mat;
 
         return true;
@@ -62,6 +63,25 @@ private:
     double radius;
     std::shared_ptr<Material> mat;
     Aabb bbox; 
+
+    static void get_uv_coordinates(double& u, double& v, const Point3& p ) {
+        /*uv texture mapping is mapping a 2d texture image on a 3d surphase. 
+        The sphere is a 3d surface, but our image is 2d. therefore we need to map (x,y,z) to (u,v)
+        u,v is normalized to 0-1.
+        these eqs consider a unit sphere:
+        angle theta -> dtermines vertical position (0-pi(180 degrees))
+        angle phi -> horizontal position (0-2pi)
+        u = pi / 2pi
+        v = theta/pi
+        theta = cosinverse(-y)
+        phi = atan2(-z, x) + pi
+        */
+        auto theta = std::acos(-p.y());
+        auto phi = std::atan2(-p.z(), p.x()) + pi;
+        u = phi / (2*pi);
+        v = theta / pi;
+    
+    }
 };
 
 

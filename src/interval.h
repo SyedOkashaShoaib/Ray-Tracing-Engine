@@ -1,6 +1,6 @@
 #ifndef INTERVAL_H
 #define INTERVAL_H
-
+#include "core_utilities.h"
 class Interval {
 public:
     double min;

@@ -11,6 +11,7 @@ public:
     Point3 p;
     bool front_face;
     std::shared_ptr<Material> mat;
+    double u = 0.0, v=0.0; //used in texture mapping. ray hits the surface -> hit record stores p, u,v. evaluate T(u,v p)
     void set_face_normal(const Ray& r, const Vec3& outward_normal) {
         /*
         in this ray tracer engine implementation, we have decided that the normla vector will always point agaisnt
