@@ -3,3 +3,5 @@
 *.odt
 *.exe
 *.ppm
+/images
+/external
