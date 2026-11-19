@@ -27,7 +27,13 @@ public:
     auto padding = delta / 2;
     return Interval(min - padding, max + padding);
     }
+    double size() const {
+    return max - min;
+    }
     static const Interval empty, universe;
 
 };
+inline const Interval Interval::empty = Interval(+infinity, -infinity);
+
+inline const Interval Interval::universe = Interval(-infinity, +infinity);
 #endif

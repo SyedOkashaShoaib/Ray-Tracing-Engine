@@ -12,8 +12,12 @@ class BVH_Node: public Hittable{
 public:
     BVH_Node(Hittable_List hittable_list) : BVH_Node(hittable_list.objects, 0, hittable_list.objects.size()) {}
     BVH_Node(std::vector<std::shared_ptr<Hittable>>& objects, size_t start, size_t end ) {
-        auto axis = random_int(0,2); 
-        auto comparator = (axis == 0) ? box_x_compare : (axis == 1) ? box_y_compare : box_z_compare;
+        bbox = Aabb::empty;
+        for (size_t object_index=start; object_index < end; object_index++)
+            bbox = Aabb(bbox, objects[object_index]->bounding_box());
+
+        int axis = bbox.longest_axis(); //we choose the longest axis of the bounding box containing the objects being divided.
+        auto comparator = (axis == 0) ? box_x_compare : (axis == 1) ? box_y_compare : box_z_compare; //idk..
         size_t object_span = end -start; 
         /*its the range of objs for which we are constructing the bvh */
         if (object_span == 1) {
@@ -36,7 +40,7 @@ public:
 
             
         }
-        bbox = Aabb(left->bounding_box(), right->bounding_box());
+
     }
     bool Hit(const Ray& r, Interval ray_t, Hit_Record& rec ) const override {
         if (!bbox.hit(r, ray_t)) {
