@@ -6,6 +6,7 @@
 #include "vec3.h"
 #include "color.h"
 #include "image_helper.h"
+#include "perlin.h"
 class Texture {
 public:
     virtual ~Texture() = default;
@@ -68,5 +69,28 @@ public:
  }
 private:
     Image_Helper image;
+};
+
+class Noise_Texture: public Texture {
+public: 
+    Noise_Texture(double scale): scale(scale){}
+    Color value(double , double, const Point3& p) const override {
+        /*sin along z axis gives a color scale which transitions to different colors along the sinosoidal wave.
+        but obviosuly the pattern made is deterministic and regular. to add randomness to it, we add turbulence.
+        this equation gives us a marble like object. Note if you are changing Color() in the below eq, normalize 
+        the remaining eq by multiplying by 0.5*/
+        return Color(0.5, 0.5, 0.5)* (1 + std::sin(scale*p.z() + 10 * noise.turbulence(p, 7)));
+        /*perlin class noise() gives us a double between 0-1. this class converts it into a color value */
+ 
+    }
+private:
+    Perlin noise;
+    double scale; //controls the frequency of the patterns
+    /*consider two points p1, p2 that are only 0.1 units apart. without scaling, these two points are placed
+    within the same unit cube inside the noise lattice. but after multiplying by scale, there displacement increases
+    the actual distance is still 0.1 units, but noise function sees them further apart. this leads to more unit cells
+    and more patterns*/
+    // Color color1 = Color(0.1, 0.2, 0.8); // Blue
+    // Color color2= Color(1.0, 0.5, 0.1); // Orange
 };
 #endif

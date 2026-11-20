@@ -77,9 +77,45 @@ void earth() {
     cam.renderImage(world);
 }
 
+void perlin_spheres() {
+    Hittable_List world;
+
+    auto pertext = std::make_shared<Noise_Texture>(5);
+
+    world.add(std::make_shared<Sphere>(
+        Point3(0, -1000, 0),
+        1000,
+        std::make_shared<Lambertian>(pertext)
+    ));
+
+    world.add(std::make_shared<Sphere>(
+        Point3(2, 2, 0),
+        2,
+        std::make_shared<Lambertian>(pertext)
+    ));
+
+    Camera cam;
+
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
+
+    cam.vertical_fov = 35;
+
+    cam.look_from = Point3(13, 4, 8);
+    cam.look_at = Point3(2, 1.5, 0);
+
+    cam.v_up = Vec3(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    cam.renderImage(world);
+}
+
 int main() {
 
     // checkered_spheres();
-    earth();
+    // earth();
+    perlin_spheres();
 
 }
