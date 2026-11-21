@@ -6,7 +6,7 @@
 #include "../material.h"
 #include "../texture.h"
 
-inline void benchmark_material_garden(int image_width = 400, int spp = 32)
+inline void benchmark_material_garden(int image_width = 400, int spp = 128)
 {
     Hittable_List world;
 
@@ -40,10 +40,10 @@ inline void benchmark_material_garden(int image_width = 400, int spp = 32)
     // Materials and textures
     // ---------------------------------------------------------
 
-    auto ground = std::make_shared<Lambertian>(
-        Color(0.35, 0.025, 0.035));
     // auto ground = std::make_shared<Lambertian>(
-    //     Color(1.00, 0.898, 0.706));
+    //     Color(0.35, 0.025, 0.035));
+    auto ground = std::make_shared<Lambertian>(
+        Color(1.00, 0.898, 0.706));
 
     auto glass = std::make_shared<Dielectric>(1.5);
 
@@ -264,6 +264,14 @@ inline void benchmark_material_garden(int image_width = 400, int spp = 32)
         Point3(7.4, 5.3, -18.5),
         0.75,
         rear_cool_light);
+    // Small warm accent above the nearer rear garden cluster.
+    auto upper_rear_amber = std::make_shared<Diffuse_Light>(
+        Color(4.0, 1.9, 0.75));
+
+    add(
+        Point3(-1.0, 6.1, -12.0),
+        0.55,
+        upper_rear_amber);
     // ---------------------------------------------------------
     // v1.2 balancing patch: left-side fill
     // ---------------------------------------------------------
