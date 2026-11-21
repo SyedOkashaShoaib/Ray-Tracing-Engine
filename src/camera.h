@@ -14,7 +14,8 @@ public:
     Point3 look_at = Point3(0,0,-1); // point where we look at (can also be changed into the direction we are looking at)
     Vec3 v_up = Vec3(0,1,0); //points up relative to the camera (look at the diag in the book) Orthogonal to the view direction
     double  defocus_angle = 0.0; //angle of the cone with apex at viewport center and base (defocus disk) at the camera center. used to control the defocus blur 
-    double focus_dist = 1.0; //distance between camera and focus plane.  
+    double focus_dist = 1.0; //distance between camera and focus plane. 
+    Color background_color = Color(0,0,0); 
     Camera() {}
 
     Vec3 sample_square() {
@@ -28,24 +29,24 @@ public:
         if (depth <= 0) {
             return Color(0,0,0); //black.
         }
-        if (world.Hit(r, Interval(0.001, infinity), rec)){
-            Ray r_out;
-            Color attenuation;
-            if (rec.mat->scatter(r, r_out, rec, attenuation)) {
-                return attenuation * ray_color(r_out, world, depth-1);
-            }
-            return Color(0,0,0);
+        if (!world.Hit(r, Interval(0.001, infinity), rec)){
+            /*did the ray hit an object? if it didnt return the background color*/
+            return background_color;
         }
-        Vec3 unit_direction = unit(r.direction());
-    /*
-    Basic implementation where the higher y coordinate, the bluer the pixel, and the lower the y-cord, the whiter the pixel
-    y = 1 means blue
-    y = 0 means white
-    but after normalizing -1 <= y >= 1. We need to linearly scale it to 0-1:
-    a =( y + 1 )/ 2
-    */
-        auto a = 0.5 * (unit_direction.y() + 1.0 );
-        return (1 - a) * Color(1.0,1.0,1.0) + a * Color(0.5, 0.7, 1.0); //c1 is white
+        Ray scattered;
+        Color attenuation;
+        Color color_from_emition = rec.mat->emit(rec.u, rec.v, rec.p); //collect all the light emitted by the material
+        if (!rec.mat->scatter(r, scattered,rec, attenuation)) {
+            /*does the material incident rays? if not, then its a light emitting material, return its emitted light
+            The recursion stops here, and the ray carries the emitted radiance back toward the camera. 
+            This is what allows the sphere to act as a source of light.*/
+            return color_from_emition;
+        }
+        Color color_from_scatter = attenuation * ray_color(scattered, world, depth-1);
+        return color_from_emition + color_from_scatter;
+        /*
+        mathematically: 
+            Radiance returned by r = (Emition returned by the current material) + (Attenuation from scattering rays) * (radiance returned by the recursive scattered ray)*/
     }
 
     void renderImage(const Hittable_List& world) {   
