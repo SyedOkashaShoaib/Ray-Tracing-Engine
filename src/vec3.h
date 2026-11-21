@@ -2,7 +2,7 @@
 #define VEC3_H
 
 #include "core_utilities.h"
-
+#include "rng.h"
 class Vec3
 {
 public:
@@ -142,6 +142,35 @@ inline Vec3 refract(const Vec3& uv, const Vec3& n, double ref_ind1_over_ref_ind2
 inline Vec3 random_on_unit_disk() {
     while( true) {
         auto p = Vec3(random_double(-1,1), random_double(-1,1), 0);
+        if (p.length_squared() < 1) {
+            return p;
+        }
+    }
+}
+inline Vec3 random_vector( RNG& gen, double min, double max) {
+    return Vec3( gen.uniform(min, max), gen.uniform(min, max), gen.uniform(min, max));
+    
+}
+
+inline Vec3 random_unit_vector(RNG& gen) {
+    while (true) {
+        auto point = random_vector(gen, -1, 1);
+        auto lensq = point.length_squared();
+
+        if (lensq <= 1 && lensq > 1e-160) {
+            return point / std::sqrt(lensq);
+        }
+    }
+}
+
+inline Vec3 random_on_unit_disk(RNG& gen) {
+    while (true) {
+        auto p = Vec3(
+            gen.uniform(-1, 1),
+            gen.uniform(-1, 1),
+            0
+        );
+
         if (p.length_squared() < 1) {
             return p;
         }

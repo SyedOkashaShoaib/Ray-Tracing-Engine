@@ -2,7 +2,7 @@
 #define CAMERA_H
 #include "hittable_list.h"
 #include "material.h"
-
+#include "rng.h"
 class Camera {
 public:
     double aspect_ratio = 1.0;
@@ -16,10 +16,11 @@ public:
     double  defocus_angle = 0.0; //angle of the cone with apex at viewport center and base (defocus disk) at the camera center. used to control the defocus blur 
     double focus_dist = 1.0; //distance between camera and focus plane. 
     Color background_color = Color(0,0,0); 
+    std::uint64_t rng_seed = 42;
     Camera() {}
 
-    Vec3 sample_square() {
-        return Vec3(random_double() - 0.5, random_double() - 0.5, 0);
+    Vec3 sample_square(RNG& gen) {
+        return Vec3(gen.uniform() - 0.5, gen.uniform() - 0.5, 0);
         /*
         random_double returns between [0,1). subtract 0.5 and your range becomes [-.5,.5). so for each pixel "square"
         the offset lies 0.5 units away from the center. z axis is 0 cause the viewport is flat...This is all done for anti-aliasing.*/
@@ -28,7 +29,7 @@ public:
         std::vector<Color> framebuffer = render(world);
         writeImage(std::cout, framebuffer);
 }
-    Vec3 ray_color(const Ray& r, const Hittable& world, int depth) const {
+    Vec3 ray_color(const Ray& r, const Hittable& world, int depth, RNG& gen) const {
         Hit_Record rec;
         if (depth <= 0) {
             return Color(0,0,0); //black.
@@ -40,13 +41,13 @@ public:
         Ray scattered;
         Color attenuation;
         Color color_from_emition = rec.mat->emit(rec.u, rec.v, rec.p); //collect all the light emitted by the material
-        if (!rec.mat->scatter(r, scattered,rec, attenuation)) {
+        if (!rec.mat->scatter(r, scattered,rec, attenuation, gen)) {
             /*does the material incident rays? if not, then its a light emitting material, return its emitted light
             The recursion stops here, and the ray carries the emitted radiance back toward the camera. 
             This is what allows the sphere to act as a source of light.*/
             return color_from_emition;
         }
-        Color color_from_scatter = attenuation * ray_color(scattered, world, depth-1);
+        Color color_from_scatter = attenuation * ray_color(scattered, world, depth-1, gen);
         return color_from_emition + color_from_scatter;
         /*
         mathematically: 
@@ -63,10 +64,12 @@ public:
         //Formula is easy. std::flush forces clog to immediately flush out the text. (clog buffers data). the trailing space after the formula is neccessary to remove the older digits, as the number gets smaller.
             for (int col = 0; col < image_width; col++)
             {
+                std::uint64_t pixel_id = static_cast<std::uint64_t>(row) * static_cast<std::uint64_t>(image_width) + static_cast<std::uint64_t>(col);
+                RNG gen(rng_seed + pixel_id);
                 Color pixel_color(0,0,0);
                 for (int sample = 0; sample < samples_per_pixel; sample++) {
-                    Ray r = get_ray(col, row);
-                    pixel_color += ray_color(r, world, max_depth);
+                    Ray r = get_ray(col, row, gen);
+                    pixel_color += ray_color(r, world, max_depth, gen);
                 /*
                 why are summing up the ray colors? previously, we would pass a ray through the center of a pixel "square" only. one ray per square. This 
                 caused jitering, or the stairs effect on object's boundaries. now we are passing multiple rays accross a pixel's square, summing up their
@@ -89,10 +92,10 @@ public:
     }
 }
 
-    Ray get_ray(int i, int j) {
-        Vec3 offset= sample_square();
+    Ray get_ray(int i, int j, RNG& gen) {
+        Vec3 offset= sample_square(gen);
         auto pixel_sample = pixel00_loc + ((i + offset.x() ) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
-        auto ray_origin = (defocus_angle  <= 0.0) ? camera_center : defocus_disk_sample();
+        auto ray_origin = (defocus_angle  <= 0.0) ? camera_center : defocus_disk_sample(gen);
         auto ray_direction = pixel_sample - ray_origin;
         Ray r(ray_origin, ray_direction); 
         return r;
@@ -140,9 +143,9 @@ private:
         defocus_disk_u = defocus_radius * cam_right;
         defocus_disk_v = defocus_radius *cam_up;
     }
-    Point3 defocus_disk_sample() const {
+    Point3 defocus_disk_sample(RNG& gen) const {
         // Returns a random point in the camera defocus disk.
-        auto p = random_on_unit_disk();
+        auto p = random_on_unit_disk(gen);
         return (camera_center + (p.x() * defocus_disk_u) + (p.y() * defocus_disk_v));
     }
 };

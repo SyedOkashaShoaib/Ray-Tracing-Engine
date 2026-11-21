@@ -4,11 +4,12 @@
 #include <algorithm>
 #include "hittable.h"
 #include "texture.h"
+#include "rng.h"
 /*read 10.4ish to understand this stuff. i forgot to add comments*/
 class Material {
 public:
     virtual ~Material() = default;
-    virtual bool scatter(const Ray& , Ray& , const Hit_Record& , Color&  ) const {
+    virtual bool scatter(const Ray& , Ray& , const Hit_Record& , Color&, RNG&  ) const {
         return false;
     };
     virtual Color emit(double , double , const Point3& ) const {
@@ -20,13 +21,13 @@ class Lambertian: public Material {
 public: 
     Lambertian(const Color& albedo): tex(std::make_shared<Solid_Color>(albedo)) {}
     Lambertian(std::shared_ptr<Texture> tex) : tex(tex) {}
-    bool scatter(const Ray&, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override {
+    bool scatter(const Ray&, Ray& r_out, const Hit_Record& rec, Color& attenuation, RNG& gen) const override {
         /*
         why is t_min 0.001 instead of 0? Because it provides a basic workaround for the shadow acne problem. 
         P is calculated using floating point arithmetic, meaning that the intersection point of the ray could be 
         slighlty above or below the surface of the hittable object. by using t=0.001 we try to mitigate this small floating 
         point inaccuracy.  */
-        Vec3 scatter_direction = rec.normal + random_unit_vector();
+        Vec3 scatter_direction = rec.normal + random_unit_vector(gen);
         /*why add the normal vector? Because we are using lambartian distribution. Can i claim that i completely understand 
         this? No. But lambartian distribution claims that a reflected ray is more likely to be closer to the surface normal. 
         lambartian distribution better renders diffuse objs*/
@@ -46,9 +47,9 @@ class Metal: public Material {
 public:
     Metal (const Color& albedo, double fuzz): albedo(albedo), fuzz(fuzz < 1 ? fuzz: 1) {}
     
-    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override  {
+    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation, RNG& gen) const override  {
         Vec3 reflected_r = reflect(r_in.direction(), rec.normal);
-        reflected_r = unit(reflected_r) + fuzz * random_unit_vector();
+        reflected_r = unit(reflected_r) + fuzz * random_unit_vector(gen);
         r_out = Ray(rec.p, reflected_r);
         attenuation = albedo; 
         return (dot(r_out.direction(), rec.normal) > 0.0);
@@ -61,7 +62,7 @@ private:
 class Dielectric: public Material {
 public:
     Dielectric(double refractive_index): refractive_index(refractive_index) {}
-    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation) const override {
+    bool scatter(const Ray& r_in, Ray& r_out, const Hit_Record& rec, Color& attenuation, RNG& gen) const override {
         attenuation = Color(1,1,1);
         double ri = rec.front_face ? (1.0 / refractive_index) : (refractive_index / 1);
         /*if front face is true, that means that rays entering from air in the dielectric. therefore ratio becomes = ri_air / ri_dielectrc.
@@ -75,7 +76,7 @@ public:
         sintheta_1 = 1.5 / 1.0 * sintheta_2
         but sintheta_1 cant be greater than 1 obv. thus we cant refract,we must reflect*/
         Vec3 direction;
-        if (cant_refract || reflectance(cos_theta, ri) > random_double()) {
+        if (cant_refract || reflectance(cos_theta, ri) > gen.uniform()) {
             direction = reflect(unit_direction, rec.normal);
         }
         else {

@@ -6,3 +6,5 @@
 *.png
 images/
 external/
+builds/
+tests/
