@@ -24,6 +24,10 @@ public:
         random_double returns between [0,1). subtract 0.5 and your range becomes [-.5,.5). so for each pixel "square"
         the offset lies 0.5 units away from the center. z axis is 0 cause the viewport is flat...This is all done for anti-aliasing.*/
     }
+    void renderImage(const Hittable_List& world) {
+        std::vector<Color> framebuffer = render(world);
+        writeImage(std::cout, framebuffer);
+}
     Vec3 ray_color(const Ray& r, const Hittable& world, int depth) const {
         Hit_Record rec;
         if (depth <= 0) {
@@ -49,20 +53,16 @@ public:
             Radiance returned by r = (Emition returned by the current material) + (Attenuation from scattering rays) * (radiance returned by the recursive scattered ray)*/
     }
 
-    void renderImage(const Hittable_List& world) {   
+    std::vector<Color> render(const Hittable_List& world) {   
         initialize();
-        std::cout << "P3\n" << image_width << " " << image_height << "\n255\n"; // p3 -> ppm file, last 255 tells the max value for r,g,b
+        std::vector<Color> frame_buffer(image_width * image_height);
+   // p3 -> ppm file, last 255 tells the max value for r,g,b
         for (int row = 0; row < image_height; row++)
         {
             std::clog << "\rScanlines remaining: " << (image_height - row) <<' '<< std::flush; // clog ->logging stream. \r brings the cursor back to the start of the line. 
         //Formula is easy. std::flush forces clog to immediately flush out the text. (clog buffers data). the trailing space after the formula is neccessary to remove the older digits, as the number gets smaller.
             for (int col = 0; col < image_width; col++)
             {
-                // auto pixel_center = pixel00_loc + (col * pixel_delta_u) + (row * pixel_delta_v);
-                // auto ray_direction = pixel_center - camera_center;
-                // Ray r(camera_center, ray_direction);
-                // Color pixel_color= ray_color(r, world);
-                // write_color(std::cout, pixel_color);
                 Color pixel_color(0,0,0);
                 for (int sample = 0; sample < samples_per_pixel; sample++) {
                     Ray r = get_ray(col, row);
@@ -72,11 +72,22 @@ public:
                 caused jitering, or the stairs effect on object's boundaries. now we are passing multiple rays accross a pixel's square, summing up their
                 colors, and dividing by the number of rays(samples) passed. this gives us a degree of smoothness.*/
                 }
-                write_color(std::cout, pixel_color * pixel_samples_scale);
+                frame_buffer[row * image_width + col] = pixel_color * pixel_samples_scale;
+                
             }
         }
         std::clog << "\rDone                        \n" << std::flush; 
+        return frame_buffer;
     }
+    void writeImage(std::ostream& out, const std::vector<Color>& framebuffer) const {
+    out << "P3\n"
+        << image_width << " "
+        << image_height << "\n255\n";
+
+    for (const Color& pixel : framebuffer) {
+        write_color(out, pixel);
+    }
+}
 
     Ray get_ray(int i, int j) {
         Vec3 offset= sample_square();
