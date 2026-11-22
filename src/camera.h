@@ -1,5 +1,14 @@
 #ifndef CAMERA_H
 #define CAMERA_H
+#if defined(RT_USE_OPENMP) && !defined(_OPENMP)
+#error "RT_USE_OPENMP requires compiling with -fopenmp"
+#endif
+/*RT_USE_OPENMP -> our defined macro to ask the compiler to use openmp.
+_OPENMP-> macro predefined to enable openmp usage */
+#if defined(RT_USE_MPI)
+#include <mpi.h>
+#endif
+#include <type_traits>
 #include "hittable_list.h"
 #include "material.h"
 #include "rng.h"
@@ -26,9 +35,16 @@ public:
         the offset lies 0.5 units away from the center. z axis is 0 cause the viewport is flat...This is all done for anti-aliasing.*/
     }
     void renderImage(const Hittable_List& world) {
-        std::vector<Color> framebuffer = render(world);
-        writeImage(std::cout, framebuffer);
-}
+        #if defined(RT_USE_MPI)
+
+        renderImageMPI(world);
+
+        #else
+
+            std::vector<Color> framebuffer = render(world);
+            writeImage(std::cout, framebuffer);
+        #endif
+    }
     Vec3 ray_color(const Ray& r, const Hittable& world, int depth, RNG& gen) const {
         Hit_Record rec;
         if (depth <= 0) {
@@ -56,36 +72,99 @@ public:
 
     std::vector<Color> render(const Hittable_List& world) {   
         initialize();
-        std::vector<Color> frame_buffer(image_width * image_height);
-   // p3 -> ppm file, last 255 tells the max value for r,g,b
-        for (int row = 0; row < image_height; row++)
-        {
-            std::clog << "\rScanlines remaining: " << (image_height - row) <<' '<< std::flush; // clog ->logging stream. \r brings the cursor back to the start of the line. 
-        //Formula is easy. std::flush forces clog to immediately flush out the text. (clog buffers data). the trailing space after the formula is neccessary to remove the older digits, as the number gets smaller.
-            for (int col = 0; col < image_width; col++)
-            {
-                std::uint64_t pixel_id = static_cast<std::uint64_t>(row) * static_cast<std::uint64_t>(image_width) + static_cast<std::uint64_t>(col);
-                RNG gen(rng_seed + pixel_id);
-                Color pixel_color(0,0,0);
-                for (int sample = 0; sample < samples_per_pixel; sample++) {
-                    Ray r = get_ray(col, row, gen);
-                    pixel_color += ray_color(r, world, max_depth, gen);
-                /*
-                why are summing up the ray colors? previously, we would pass a ray through the center of a pixel "square" only. one ray per square. This 
-                caused jitering, or the stairs effect on object's boundaries. now we are passing multiple rays accross a pixel's square, summing up their
-                colors, and dividing by the number of rays(samples) passed. this gives us a degree of smoothness.*/
-                }
-                frame_buffer[row * image_width + col] = pixel_color * pixel_samples_scale;
-                
-            }
-        }
-        std::clog << "\rDone                        \n" << std::flush; 
-        return frame_buffer;
+    return renderRowsInitialized( world, 0, image_height);
+
     }
+
+    #if defined(RT_USE_MPI)
+    void renderImageMPI(const Hittable_List& world) {
+        int rank;
+        int world_size;
+
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size); //comm_size = world_size
+
+        initialize(); //each mpi proc needs to initialize the same configs cause no shared memory
+
+         // Divide image rows among MPI ranks.
+        const int base = image_height / world_size; //min rows each proc gets
+        const int remainder = image_height % world_size;
+        /*remainder can neber be greater than world_size - 1. therefore it cant be greater than the number of process. THe 
+        first remaninder number of processes get one row extra.*/
+
+        const int local_rows = base + (rank < remainder ? 1 : 0);
+
+        const int start_row = rank * base + std::min(rank, remainder);
+
+        const int end_row = start_row + local_rows;
+
+        // Each rank renders only its assigned rows.
+        std::vector<Color> local_pixels = renderRowsInitialized(world, start_row, end_row);
+
+    // Our Color (Vec3) contains three contiguous doubles.
+        static_assert(std::is_standard_layout_v<Color>);
+        static_assert(sizeof(Color) == 3 * sizeof(double));
+        /*we are verifying that the colors memroy layout is 3 * double becaues we need to create a custom MPI datatype. */
+
+        MPI_Datatype mpi_color;
+        MPI_Type_contiguous(3, MPI_DOUBLE, &mpi_color);
+        /*contigouus lays out 3 doubles back to back in memroy with no gaps in between*/
+        MPI_Type_commit(&mpi_color); //we register the derived datatype
+
+        std::vector<int> receive_counts;
+        std::vector<int> displacements;
+        std::vector<Color> full_image;
+
+        if (rank == 0) {
+            receive_counts.resize(world_size);
+            /*how many pixels will rank 0 recieve from each rank?*/
+            displacements.resize(world_size);
+            /*at what index does does rank 0 have to place rank is first sent pixel in the final framebuffer?*/
+
+            full_image.resize(static_cast<std::size_t>(image_width) * static_cast<std::size_t>(image_height));
+
+        for (int r = 0; r < world_size; r++) {
+            const int rows =
+                base + (r < remainder ? 1 : 0);
+
+            const int first_row =
+                r * base + std::min(r, remainder);
+
+            receive_counts[r] = rows * image_width;
+            displacements[r] = first_row * image_width;
+        }
+    }
+
+    // Collect all pixel blocks on rank 0.
+        MPI_Gatherv(
+            local_pixels.data(),
+            static_cast<int>(local_pixels.size()),
+            mpi_color,
+            rank == 0 ? full_image.data() : nullptr,
+            rank == 0 ? receive_counts.data() : nullptr,
+            rank == 0 ? displacements.data() : nullptr,
+            mpi_color,
+            0,
+            MPI_COMM_WORLD
+        );
+        /*why are we using mpi gatherv instead of mpi gather? 
+        because in mpi gather, the recieve count is an integer. meaing that each sending process can send a constant recvcount amount 
+        of data. in mpigatherv, recieve count is an array. discp is an additional array that specifiies where eachprocess's 
+        contribution begins in the receiving buffer.*/
+
+        MPI_Type_free(&mpi_color); //free the registered custom datatype
+
+    // Only the root process writes the image.
+        if (rank == 0) {
+            writeImage(std::cout, full_image);
+        }
+    }
+
+    #endif
     void writeImage(std::ostream& out, const std::vector<Color>& framebuffer) const {
     out << "P3\n"
         << image_width << " "
-        << image_height << "\n255\n";
+        << image_height << "\n255\n";  // p3 -> ppm file, last 255 tells the max value for r,g,b
 
     for (const Color& pixel : framebuffer) {
         write_color(out, pixel);
@@ -119,6 +198,7 @@ private:
         double h = std::tan(theta/2);
         auto viewport_height = 2*h*focus_dist;
         auto viewport_width = viewport_height * (double(image_width) / image_height); 
+        
     /*
     camera center = where the rays originate from. cordinates: (0,0,0)
     focal length =  distance between camera center and viewport = set to 1
@@ -148,6 +228,37 @@ private:
         auto p = random_on_unit_disk(gen);
         return (camera_center + (p.x() * defocus_disk_u) + (p.y() * defocus_disk_v));
     }
+
+    std::vector<Color> renderRowsInitialized( const Hittable_List& world, int start_row, int end_row) {
+        const std::size_t count = static_cast<std::size_t>(end_row - start_row) * static_cast<std::size_t>(image_width);
+        std::vector<Color> pixels(count);
+
+        #if defined(RT_USE_OPENMP)
+            #pragma omp parallel for schedule(runtime)
+        #endif
+        for (int row = start_row; row < end_row; row++) {
+
+            for (int col = 0; col < image_width; col++) {
+
+                std::uint64_t pixel_id = static_cast<std::uint64_t>(row) * static_cast<std::uint64_t>(image_width) + static_cast<std::uint64_t>(col);
+
+                RNG gen(rng_seed + pixel_id);
+                Color pixel_color(0, 0, 0);
+
+                for (int sample = 0; sample < samples_per_pixel; sample++) {
+
+                    Ray r = get_ray(col, row, gen);
+
+                    pixel_color += ray_color( r, world, max_depth, gen);
+            }
+
+                const std::size_t local_index = static_cast<std::size_t>( row - start_row) * image_width + col;
+                pixels[local_index] = pixel_color * pixel_samples_scale;
+        }
+    }
+
+    return pixels;
+}
 };
 
 #endif
