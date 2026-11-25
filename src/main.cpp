@@ -1,7 +1,30 @@
 #include <iostream>
+
+#if defined(RT_USE_MPI)
+#include <mpi.h>
+#endif
+
 #include "scenes/benchmark_material_garden.h"
 #include "scenes/benchmark_sphereflake.h"
-int main() {
+
+int main(int argc, char** argv) {
+
+#if defined(RT_USE_MPI)
+
+    int provided = 0;
+
+    // Only the main thread of each rank makes MPI calls, so FUNNELED is enough.
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+
+    if (provided < MPI_THREAD_FUNNELED) {
+        std::cerr << "Insufficient MPI thread support\n";
+        MPI_Abort(MPI_COMM_WORLD, 1);
+        return 1;
+    }
+
+#endif
+
+    int status = 0;
 
 #if defined(BENCHMARK_A)
 
@@ -14,9 +37,13 @@ int main() {
 #else
 
     std::cerr << "No benchmark selected.\n";
-    return 1;
+    status = 1;
 
 #endif
 
-    return 0;
+#if defined(RT_USE_MPI)
+    MPI_Finalize();
+#endif
+
+    return status;
 }
