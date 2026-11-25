@@ -1,4 +1,7 @@
 #pragma once
+#include <chrono>
+#include <iomanip>
+#include <iostream>
 #include "../bvh.h"
 #include "../material.h"
 #include "../sphere.h"
@@ -61,7 +64,6 @@ inline int add_sphereflake(
             remaining_levels - 1,
             material);
     }
-    
 
     return count;
 }
@@ -71,6 +73,7 @@ inline void benchmark_sphereflake(
     int image_width = 400,
     int spp = 32)
 {
+    const auto setup_start = std::chrono::steady_clock::now();
     Hittable_List world;
 
     // --------------------------------------------------
@@ -157,5 +160,52 @@ inline void benchmark_sphereflake(
 
     cam.defocus_angle = 0;
 
+    cam.defocus_angle = 0;
+
+    // End of scene setup, including BVH and camera configuration.
+    const double setup_seconds =
+        std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - setup_start)
+            .count();
+
+    // Render the scene.
     cam.renderImage(world);
+
+// Report scene setup timing.
+#if defined(RT_USE_MPI)
+
+    double max_setup_seconds = 0.0;
+
+    MPI_Reduce(
+        &setup_seconds,
+        &max_setup_seconds,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX,
+        0,
+        MPI_COMM_WORLD);
+
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0)
+    {
+        std::clog << std::fixed << std::setprecision(9)
+                  << "RT_TIMING component=scene"
+                  << " scene=B"
+                  << " setup_s=" << max_setup_seconds
+                  << " aggregate=rank_max"
+                  << '\n';
+    }
+
+#else
+
+    std::clog << std::fixed << std::setprecision(9)
+              << "RT_TIMING component=scene"
+              << " scene=B"
+              << " setup_s=" << setup_seconds
+              << " aggregate=single_process"
+              << '\n';
+
+#endif
 }

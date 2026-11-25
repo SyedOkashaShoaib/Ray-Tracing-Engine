@@ -8,6 +8,11 @@ _OPENMP-> macro predefined to enable openmp usage */
 #if defined(RT_USE_MPI)
 #include <mpi.h>
 #endif
+#include <cstdlib>
+#include <fstream>
+#include <stdexcept>
+#include <chrono>
+#include <iomanip>
 #include <type_traits>
 #include "hittable_list.h"
 #include "material.h"
@@ -40,9 +45,30 @@ public:
         renderImageMPI(world);
 
         #else
-
+            using Clock = std::chrono::steady_clock;
+            const auto init_start = Clock::now();
+            initialize();
+            const auto init_end = Clock::now();
+            const auto render_start = Clock::now();
             std::vector<Color> framebuffer = render(world);
-            writeImage(std::cout, framebuffer);
+            const auto render_end = Clock::now();
+            const auto output_start = Clock::now();
+            writeImageToConfiguredOutput(framebuffer);
+            const auto output_end = Clock::now();
+                    const double init_seconds =
+            std::chrono::duration<double>( init_end - init_start).count();
+            const double render_seconds = std::chrono::duration<double>( render_end - render_start).count();
+            const double output_seconds = std::chrono::duration<double>( output_end - output_start).count();
+
+       
+            std::clog << std::fixed << std::setprecision(9)
+                      << "RT_TIMING component=camera"
+                      << " camera_init_s=" << init_seconds
+                      << " render_s=" << render_seconds
+                      << " gather_s=0.000000000"
+                      << " output_s=" << output_seconds
+                      << " aggregate=single_process"
+                      << '\n';
         #endif
     }
     Vec3 ray_color(const Ray& r, const Hittable& world, int depth, RNG& gen) const {
@@ -71,7 +97,7 @@ public:
     }
 
     std::vector<Color> render(const Hittable_List& world) {   
-        initialize();
+        
     return renderRowsInitialized( world, 0, image_height);
 
     }
@@ -83,9 +109,9 @@ public:
 
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &world_size); //comm_size = world_size
-
+        const auto init_start = MPI_Wtime();
         initialize(); //each mpi proc needs to initialize the same configs cause no shared memory
-
+        const auto init_seconds = MPI_Wtime() - init_start;
          // Divide image rows among MPI ranks.
         const int base = image_height / world_size; //min rows each proc gets
         const int remainder = image_height % world_size;
@@ -99,8 +125,9 @@ public:
         const int end_row = start_row + local_rows;
 
         // Each rank renders only its assigned rows.
+        const auto render_start = MPI_Wtime();
         std::vector<Color> local_pixels = renderRowsInitialized(world, start_row, end_row);
-
+        const auto render_seconds = MPI_Wtime() - render_start;
     // Our Color (Vec3) contains three contiguous doubles.
         static_assert(std::is_standard_layout_v<Color>);
         static_assert(sizeof(Color) == 3 * sizeof(double));
@@ -136,6 +163,7 @@ public:
     }
 
     // Collect all pixel blocks on rank 0.
+        const double gather_start = MPI_Wtime();
         MPI_Gatherv(
             local_pixels.data(),
             static_cast<int>(local_pixels.size()),
@@ -147,6 +175,7 @@ public:
             0,
             MPI_COMM_WORLD
         );
+        const double gather_seconds = MPI_Wtime() - gather_start;
         /*why are we using mpi gatherv instead of mpi gather? 
         because in mpi gather, the recieve count is an integer. meaing that each sending process can send a constant recvcount amount 
         of data. in mpigatherv, recieve count is an array. discp is an additional array that specifiies where eachprocess's 
@@ -154,9 +183,31 @@ public:
 
         MPI_Type_free(&mpi_color); //free the registered custom datatype
 
-    // Only the root process writes the image.
+        double max_init_seconds = 0.0;
+        double max_render_seconds = 0.0;
+        double max_gather_seconds = 0.0;
+
+    // Collect the maximum elapsed time across all ranks.
+        MPI_Reduce(&init_seconds, &max_init_seconds,1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce( &render_seconds, &max_render_seconds, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&gather_seconds, &max_gather_seconds, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
         if (rank == 0) {
-            writeImage(std::cout, full_image);
+
+        const double output_start = MPI_Wtime();
+
+        writeImageToConfiguredOutput(full_image);
+
+        const double output_seconds = MPI_Wtime() - output_start;
+
+        std::clog << std::fixed << std::setprecision(9)
+                  << "RT_TIMING component=camera"
+                  << " camera_init_s=" << max_init_seconds
+                  << " render_s=" << max_render_seconds
+                  << " gather_s=" << max_gather_seconds
+                  << " output_s=" << output_seconds
+                  << " aggregate=rank_max"
+                  << '\n';
         }
     }
 
@@ -168,6 +219,39 @@ public:
 
     for (const Color& pixel : framebuffer) {
         write_color(out, pixel);
+    }
+}
+
+void writeImageToConfiguredOutput(
+    const std::vector<Color>& framebuffer
+) const {
+
+    const char* path = std::getenv("RT_IMAGE_PATH");
+
+    if (path != nullptr && *path != '\0') {
+
+        std::ofstream file(path, std::ios::out | std::ios::trunc);
+
+        if (!file) {
+            throw std::runtime_error("Cannot open image output file");
+        }
+
+        writeImage(file, framebuffer);
+
+        file.close();
+
+        if (!file) {
+            throw std::runtime_error("Failed to write image output file");
+        }
+
+    } else {
+
+        writeImage(std::cout, framebuffer);
+        std::cout.flush();
+
+        if (!std::cout) {
+            throw std::runtime_error("Failed to write image to stdout");
+        }
     }
 }
 

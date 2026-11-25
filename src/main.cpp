@@ -12,8 +12,6 @@ int main(int argc, char** argv) {
 #if defined(RT_USE_MPI)
 
     int provided = 0;
-
-    // Only the main thread of each rank makes MPI calls, so FUNNELED is enough.
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
 
     if (provided < MPI_THREAD_FUNNELED) {

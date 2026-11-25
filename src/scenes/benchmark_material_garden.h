@@ -1,5 +1,7 @@
 #pragma once
-
+#include <chrono>
+#include <iomanip>
+#include <iostream>
 #include "../camera.h"
 #include "../sphere.h"
 #include "../bvh.h"
@@ -8,6 +10,7 @@
 
 inline void benchmark_material_garden(int image_width = 400, int spp = 128)
 {
+    const auto setup_start = std::chrono::steady_clock::now();
     Hittable_List world;
 
     // ---------------------------------------------------------
@@ -314,5 +317,50 @@ inline void benchmark_material_garden(int image_width = 400, int spp = 128)
 
     cam.defocus_angle = 0;
 
+    // Scene setup ends after BVH construction and camera configuration.
+    const double setup_seconds =
+        std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - setup_start)
+            .count();
+
+    // Render using the existing implementation.
     cam.renderImage(world);
+
+    // Report scene setup time.
+#if defined(RT_USE_MPI)
+
+    double max_setup_seconds = 0.0;
+
+    MPI_Reduce(
+        &setup_seconds,
+        &max_setup_seconds,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX,
+        0,
+        MPI_COMM_WORLD);
+
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0)
+    {
+          std::clog << std::fixed << std::setprecision(9)
+                    << "RT_TIMING component=scene"
+                    << " scene=A"
+                    << " setup_s=" << max_setup_seconds
+                    << " aggregate=rank_max"
+                    << '\n';  
+    }
+
+#else
+
+        std::clog << std::fixed << std::setprecision(9)
+          << "RT_TIMING component=scene"
+          << " scene=A"
+          << " setup_s=" << setup_seconds
+          << " aggregate=single_process"
+          << '\n';
+
+#endif
 }
