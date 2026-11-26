@@ -30,7 +30,7 @@ Left: the rows each of 4 MPI processes renders. Right: how many rays each pixel 
 
 ## Gallery
 
-All of these were rendered with this engine. It only supports spheres, so the floors and walls are just very large spheres.
+All of these were rendered with this engine. I used AI to write the scripts for these scenes. The engine only supports spheres, so the floors and walls are just very large spheres.
 
 <table>
 <tr>
