@@ -5,4 +5,4 @@
 *.ppm
 *.png
 images/
-external/
+external/build/
