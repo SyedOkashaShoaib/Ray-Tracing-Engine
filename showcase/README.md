@@ -17,6 +17,15 @@ main program's.
 | `07_mirror_corridor` | Two parallel mirrors: one copy per bounce | 1920 px, 512 spp |
 | `08_colour_bleeding` | Red and green walls tinting white spheres (global illumination) | 1920 px, 512 spp, depth 8 |
 | `09_rgb_light_mixing` | Red, green and blue lights giving cyan, magenta and yellow shadows | 1920 px, 1024 spp |
+| `10_galaxy` | Spiral galaxy of ~34,000 glowing spheres | 1920 px, 256 spp |
+| `11_chrome_ocean` | 10,000 mirror spheres on waves under a synthwave sunset | 1920 px, 1024 spp |
+| `12_ringed_planet` | Earth-textured planet with a ring of 20,000 spheres and a moon | 1920 px, 2048 spp |
+| `13_golden_spiral` | Sunflower: 900 seeds at the golden angle + 26 sphere petals | 1920 px, 1024 spp |
+| `14_glowing_marbles` | Glass marbles with glowing cores on a dark mirror floor | 1920 px, 2048 spp |
+| `15_snow_globe` | Water-filled globe packed with ~600 coloured spheres | 1920 px, 1024 spp |
+| `16_dna_helix` | Gold double helix with glowing base-pair rungs | 1920 px, 2048 spp |
+| `17_apollonian_packing` | A ball of ~13,000 mutually touching spheres, wedge cut away | 1920 px, 1024 spp |
+| `18_pastel_room` | Floating chrome, porcelain and glowing pastel spheres in a soft sage and peach room | 1920 px, 1024 spp |
 
 ## Requirements
 
@@ -42,6 +51,19 @@ SCENE=B bash showcase/04_cost_heatmap/render.sh                   # heatmap of S
 RANKS=8 bash showcase/03_rank_partition/render.sh                 # one rank per hardware thread
 DEPTHS="2 4 8 30" bash showcase/07_mirror_corridor/render.sh      # corridor growing with depth
 THREADS=4 bash showcase/06_fuzz_sweep/render.sh                   # use fewer threads (cooler laptop)
+```
+
+### Overnight
+
+`render_overnight.sh` renders scenes 10 to 17 one after another (about six to
+seven hours in total on a 4-core laptop). Between renders it pauses and waits
+until the CPU package temperature is back down to 60 °C, logs progress to
+`showcase/overnight.log`, and keeps going if one scene fails.
+
+```bash
+bash showcase/render_overnight.sh                 # all eight
+THREADS=6 bash showcase/render_overnight.sh       # a little cooler and quieter
+SCENES="10_galaxy 17_apollonian_packing" bash showcase/render_overnight.sh
 ```
 
 Each render is wrapped in `systemd-inhibit`, so the laptop will not suspend

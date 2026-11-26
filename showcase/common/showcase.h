@@ -252,6 +252,14 @@ inline Scene named_scene(const std::string& name, int sphereflake_levels = 4) {
     return benchmark_scene(name, sphereflake_levels);
 }
 
+// Deterministic random numbers for scene layouts (the engine's own generator).
+inline double gauss(RNG& g) {
+    const double u1 = std::max(g.uniform(), 1e-12);
+    const double u2 = g.uniform();
+    return std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * pi * u2);
+}
+inline Color lerp(const Color& a, const Color& b, double t) { return (1.0 - t) * a + t * b; }
+
 // Pixel position of a 3D point in the final image (camera must be initialized).
 inline std::pair<double, double> project(const Camera& cam, const Point3& p) {
     const Vec3 d = p - cam.camera_center;
